@@ -33,31 +33,19 @@ function startPrompt() {
                 let department_response = [{type: "input", name: "department_name", message: "What is the department name?"}]
                 return inquirer.prompt(department_response).then((data) => {
                     addDepartment(data.department_name)
-                })
+                });
+
+
+
             case "Add a Role":
-
                 var departments = []
-                function myFunction(cb) {
-
-                    db.query("SELECT name, id FROM department", (err, rows) => {
-
-                    if (err) throw err;
-                
-                    let newArray = rows.map((row) => {
-                        return row
-                    })
-                
-                    cb(newArray);
-                    })
-                }
-              
-                myFunction(myArray => {
+                returnDepartments(myArray => {
                     departments = myArray;
-
+                    console.log(departments);
                     let role_response = [
                         {type: "input", name: "title", message: "What is the role name?"},
                         {type: "input", name: "salary", message: "What is the role salary?"},
-                        {type: "list", name: "department_name", message: "Please select a department:  ", choices: departments}
+                        {type: "list", name: "department_name", message: "Please select a department: ", choices: departments}
                     ]
 
                     inquirer.prompt(role_response).then((data) => {
@@ -66,30 +54,55 @@ function startPrompt() {
                 });
                 break;
 
-            case "Add an Employee":
-                let employee_response = [
-                    {"type": "input", "name": "first_name", "message": "What is the employee's first name?"},
-                    {"type": "input", "name": "last_name", "message": "What is the employee's last name?"},
-                    {"type": "input", "name": "role_id", "message": "What is the role_id?"},
-                    {"type": "input", "name": "manager_id", "message": "What is the manager_id?"}
 
-                ]
-                return inquirer.prompt(employee_response).then((data) => {
-                    addEmployee(data);
+            case "Add an Employee":
+                var roles = []
+                returnRoles(myArray => {
+                    roles = myArray;
+                    var managers = []
+                    returnEmployees(newArray => {
+                        managers = newArray;
+
+                        let employee_response = [
+                            {type: "input", name: "first_name", message: "What is the new employee's first name?"},
+                            {type: "input", name: "last_name", message: "What is the new employee's last name?"},
+                            {type: "list", name: "employee_role", message: "Please select a role for the new employee: ", choices: roles},
+                            {type: "list", name: "manager_name", message: "Please select a manager: ", choices: managers}
+                        ]
+                        inquirer.prompt(employee_response).then((data) => {
+                            addEmployee(data);
+                        });
+
+
+                    })
+
                 });
+                break;
 
             case "Update an Employee Role":
-                let employee_role_response = [
-                    {type: "input", name: "first_name", message: "What is the current employee's first name?"},
-                    {type: "input", name: "last_name", message: "What is the current employee's last name?"},
-                    {type: "input", name: "new_role_id", message: "What is the current employee's new role id?"}
-                ]
-                return inquirer.prompt(employee_role_response).then((data) => {
-                    updateEmployeeRole(data);
-                })
-            case "Quit":   
-                1 == 1;
+                var employees = []
+                returnEmployees(myArray => {
+                    employees = myArray;
+                    var roles = []
+                    returnRoles(newArray => {
+                        roles = newArray;
+                    
+                        let employee_role_response = [
+                            {type: "list", name: "employee_name", message: "Which employee's role do you want to update?", choices: employees},
+                            {type: "list", name: "role_name", message: "Which role do you want to assign?", choices: roles}
+                        ]
+                        inquirer.prompt(employee_role_response).then((data) => {
+                            updateEmployeeRole(data);
+                        });
+                    })
+
+                });
                 break;
+
+            case "Quit":
+                process.exit();
+                
+
 
         }
     });
@@ -120,17 +133,6 @@ function getDepartments() {
       });
     startPrompt();
 }
-
-function returnDepartments() {
-    db.query(`SELECT * FROM department`, (err, result) => {
-        if (err) {
-          console.log(err);
-        }
-        let departments = JSON.parse(JSON.stringify(result));
-        return departments
-      });
-}
-
 
 function getRoles() {
     db.query(`SELECT * FROM role`, (err, result) => {
@@ -167,15 +169,45 @@ function addRole(data) {
 }
 
 function addEmployee(data) {
-    const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)`
-    const params = [data.first_name, data.last_name, data.role_id, data.manager_id]
+    const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id) SELECT ?, ?, r.id, e.id FROM role r INNER JOIN employee e WHERE title = ? AND CONCAT(e.first_name, ' ', e.last_name) = ?`
+    const params = [data.first_name, data.last_name, data.employee_role, data.manager_name]
     db.query(query, params);
     startPrompt();
 }
 
 function updateEmployeeRole(data) {
-    const query =  `UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ?`
-    const params = [data.new_role_id, data.first_name, data.last_name]
+    const query =  `UPDATE employee SET role_id = (SELECT id FROM role WHERE title = ?) WHERE CONCAT(first_name, ' ', last_name) = ?`
+    const params = [data.role_name, data.employee_name]
     db.query(query, params);
     startPrompt();
 }
+
+function returnRoles(cb) {
+    db.query("SELECT title FROM role", (err, rows) => {
+    if (err) throw err;
+    let newArray = rows.map((row) => {
+        return row.title;
+    });
+    cb(newArray);
+    });
+};
+
+function returnEmployees(cb) {
+    db.query("SELECT CONCAT(first_name , ' ',last_name ) name from employee", (err, rows) => {
+        if (err) throw err;
+        let newArray = rows.map((row) => {
+            return row.name;
+        });
+        cb(newArray);
+        });
+};
+
+function returnDepartments(cb) {
+    db.query("SELECT name, id FROM department", (err, rows) => {
+    if (err) throw err;
+    let newArray = rows.map((row) => {
+        return row;
+    });
+    cb(newArray);
+    });
+};
