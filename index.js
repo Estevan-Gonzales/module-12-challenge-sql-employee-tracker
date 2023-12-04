@@ -24,37 +24,48 @@ function startPrompt() {
     return inquirer.prompt(criteria).then((data) => {
         switch (data.selection) {
             case "View all Departments":
-                getDepartments();
-                startPrompt();
-                break;
+                return getDepartments();
             case "View all Roles":
-                exit = 1;
-                getRoles();
-                startPrompt();
-                break;
+                return getRoles();
             case "View all Employees":
-                getEmployees();
-                startPrompt();
-                break;
+                return getEmployees();
             case "Add a Department":
-                console.clear;
-                let department_response = {"type": "input", "name": "department_name", "message": "What is the department name?"}
-                inquirer.prompt(department_response).then((data) => {
-                    addDepartment(data.department_name);
-                });
-                startPrompt();
-                break;
+                let department_response = [{type: "input", name: "department_name", message: "What is the department name?"}]
+                return inquirer.prompt(department_response).then((data) => {
+                    addDepartment(data.department_name)
+                })
             case "Add a Role":
-                let role_response = [
-                    {"type": "input", "name": "title", "message": "What is the role name?"},
-                    {"type": "input", "name": "salary", "message": "What is the role salary?"},
-                    {"type": "input", "name": "department_id", "message": "What is the department_id?"}
-                ]
-                inquirer.prompt(role_response).then((data) => {
-                    addRole(data);
+
+                var departments = []
+                function myFunction(cb) {
+
+                    db.query("SELECT name, id FROM department", (err, rows) => {
+
+                    if (err) throw err;
+                
+                    let newArray = rows.map((row) => {
+                        return row
+                    })
+                
+                    cb(newArray);
+                    })
+                }
+              
+                myFunction(myArray => {
+                    departments = myArray;
+
+                    let role_response = [
+                        {type: "input", name: "title", message: "What is the role name?"},
+                        {type: "input", name: "salary", message: "What is the role salary?"},
+                        {type: "list", name: "department_name", message: "Please select a department:  ", choices: departments}
+                    ]
+
+                    inquirer.prompt(role_response).then((data) => {
+                        addRole(data);
+                    });
                 });
-                startPrompt();
                 break;
+
             case "Add an Employee":
                 let employee_response = [
                     {"type": "input", "name": "first_name", "message": "What is the employee's first name?"},
@@ -63,14 +74,19 @@ function startPrompt() {
                     {"type": "input", "name": "manager_id", "message": "What is the manager_id?"}
 
                 ]
-                inquirer.prompt(employee_response).then((data) => {
-                    addRole(data)
+                return inquirer.prompt(employee_response).then((data) => {
+                    addEmployee(data);
                 });
-                startPrompt();
-                break;
+
             case "Update an Employee Role":
-                startPrompt();
-                break;
+                let employee_role_response = [
+                    {type: "input", name: "first_name", message: "What is the current employee's first name?"},
+                    {type: "input", name: "last_name", message: "What is the current employee's last name?"},
+                    {type: "input", name: "new_role_id", message: "What is the current employee's new role id?"}
+                ]
+                return inquirer.prompt(employee_role_response).then((data) => {
+                    updateEmployeeRole(data);
+                })
             case "Quit":   
                 1 == 1;
                 break;
@@ -100,38 +116,66 @@ function getDepartments() {
         if (err) {
           console.log(err);
         }
-        console.log(result);
+        console.table(result);
+      });
+    startPrompt();
+}
+
+function returnDepartments() {
+    db.query(`SELECT * FROM department`, (err, result) => {
+        if (err) {
+          console.log(err);
+        }
+        let departments = JSON.parse(JSON.stringify(result));
+        return departments
       });
 }
+
 
 function getRoles() {
     db.query(`SELECT * FROM role`, (err, result) => {
         if (err) {
             console.log(err);
         }
-        console.log(result);
+        console.table(result);
         });
-    }
+    startPrompt();
+
+}
 
 function getEmployees() {
     db.query(`SELECT * FROM employee`, (err, result) => {
         if (err) {
             console.log(err);
         }
-        console.log(result);
+        console.table(result);
         });
-    }
+    startPrompt();
+}
 
 function addDepartment(department) {
     db.query(`INSERT INTO department (name) VALUES (?)`, department);
+    startPrompt();
 }
 
 function addRole(data) {
-    const query = 'INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)';
-    const params = [data.title, data.salary, data.department_id]
+    console.log(data);
+    const query = `INSERT INTO role (title, salary, department_id) SELECT ?, ?, d.id FROM department d WHERE name = ?`;
+    const params = [data.title, data.salary, data.department_name]
     db.query(query, params);
+    startPrompt();
 }
 
 function addEmployee(data) {
-    db.query(`INSERT INTO department (name) VALUES (?)`, department);
+    const query = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)`
+    const params = [data.first_name, data.last_name, data.role_id, data.manager_id]
+    db.query(query, params);
+    startPrompt();
+}
+
+function updateEmployeeRole(data) {
+    const query =  `UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ?`
+    const params = [data.new_role_id, data.first_name, data.last_name]
+    db.query(query, params);
+    startPrompt();
 }
