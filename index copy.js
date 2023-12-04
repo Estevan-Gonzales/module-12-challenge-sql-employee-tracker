@@ -1,5 +1,4 @@
 const inquirer = require('inquirer');
-const mysql = require('mysql2');
 
 const criteria = [
     {
@@ -8,16 +7,11 @@ const criteria = [
         name: "selection",
         choices: [
             "View all Departments",
-            "View all Roles",
-            "View all Employees",
-            "Add a Department",
-            "Add a Role",
-            "Add an Employee",
-            "Update an Employee Role",
-            "Quit"
+            "View all Roles"
         ]
     }
 ];
+
 
 
 function startPrompt() {
@@ -25,16 +19,15 @@ function startPrompt() {
         switch (data.selection) {
             case "View all Departments":
                 getDepartments();
-                startPrompt();
+                //startPromt();
                 break;
             case "View all Roles":
-                exit = 1;
                 getRoles();
-                startPrompt();
+                //startPromt();
                 break;
             case "View all Employees":
                 getEmployees();
-                startPrompt();
+                //startPromt();
                 break;
             case "Add a Department":
                 console.clear;
@@ -42,7 +35,7 @@ function startPrompt() {
                 inquirer.prompt(department_response).then((data) => {
                     addDepartment(data.department_name);
                 });
-                startPrompt();
+                //startPromt();
                 break;
             case "Add a Role":
                 let role_response = [
@@ -53,7 +46,6 @@ function startPrompt() {
                 inquirer.prompt(role_response).then((data) => {
                     addRole(data);
                 });
-                startPrompt();
                 break;
             case "Add an Employee":
                 let employee_response = [
@@ -66,72 +58,21 @@ function startPrompt() {
                 inquirer.prompt(employee_response).then((data) => {
                     addRole(data)
                 });
-                startPrompt();
                 break;
             case "Update an Employee Role":
-                startPrompt();
+                console.log("Here");
                 break;
-            case "Quit":   
-                1 == 1;
+            case "Quit":
+                return 1;
+                break;
+                1==1;
+            default:
+                "Not a choice";
                 break;
 
         }
     });
 }
 
-const db = mysql.createConnection(
-    {
-      host: 'j21q532mu148i8ms.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
-      // MySQL username,
-      user: 'jzio8hj2vqlkwmiw',
-      // TODO: Add MySQL password here
-      password: 'd2rabo9r02bjhc9e',
-      database: 'kf6saag0gxb257p7'
-    },
-    console.log(`Connected to database.`)
-  );
-
 
 startPrompt();
-
-
-function getDepartments() {
-    db.query(`SELECT * FROM department`, (err, result) => {
-        if (err) {
-          console.log(err);
-        }
-        console.log(result);
-      });
-}
-
-function getRoles() {
-    db.query(`SELECT * FROM role`, (err, result) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log(result);
-        });
-    }
-
-function getEmployees() {
-    db.query(`SELECT * FROM employee`, (err, result) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log(result);
-        });
-    }
-
-function addDepartment(department) {
-    db.query(`INSERT INTO department (name) VALUES (?)`, department);
-}
-
-function addRole(data) {
-    const query = 'INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)';
-    const params = [data.title, data.salary, data.department_id]
-    db.query(query, params);
-}
-
-function addEmployee(data) {
-    db.query(`INSERT INTO department (name) VALUES (?)`, department);
-}
